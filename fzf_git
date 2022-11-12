@@ -1,0 +1,26 @@
+#!/bin/sh
+
+repos=$(find $HOME -type d -name .git \
+        ! -path  "*/.local/*" \
+        ! -path "*/.zplug/*" \
+        ! -path "*/.cache/*" | \
+        cut -f1 -d ".")
+list="STATUS,REPOSITORY\n"
+# get status of repo
+while read line; do
+  cd $line
+  if [[ $(git status --porcelain | wc -l) -gt 0  ]]; then  
+    status="+"
+  else   
+    status=" "
+  fi
+  list+="$status,$line\n"
+done <<< $repos
+# columns to fzf
+selected=$(echo -e $list | column -t -s ,| \
+  fzf-tmux -p --header-lines=1)
+# open repo with nvim lazygit
+[[ -n "$selected" ]] && { tmux neww zsh -c \
+  "cd $selected || cd $(awk '{print $2}' <<< $selected) && \
+  nvim -c 'LazyGit'"; \
+  exit 1; }
